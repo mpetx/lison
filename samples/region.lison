@@ -1,0 +1,63 @@
+{
+    "width": 100,
+    "height": 100,
+    "unit-per-inch": 72,
+    "pens": [
+	{
+	    "pattern": {
+		"type": "monochrome",
+		"color": [0.9, 0.9, 0]
+	    },
+	    "width": 2,
+	    "cap": "butt",
+	    "join": "miter"
+	}
+    ],
+    "brushes": [
+	{
+	    "pattern": {
+		"type": "monochrome",
+		"color": [0, 1, 0.5]
+	    }
+	},
+	{
+	    "pattern": {
+		"type": "monochrome",
+		"color": [1, 0.5, 0]
+	    }
+	}
+    ],
+    "shapes": [
+	{
+	    "type": "region",
+	    "brush": 0,
+	    "data": [
+		[
+		    [5, 5],
+		    ["L", [5, 95]],
+		    ["L", [45, 95]],
+		    ["L", [45, 5]]
+		]
+	    ]
+	},
+	{
+	    "type": "region",
+	    "pen": 0,
+	    "brush": 1,
+	    "data": [
+		[
+		    [55, 5],
+		    ["L", [55, 95]],
+		    ["L", [95, 95]],
+		    ["L", [95, 5]]
+		],
+		[
+		    [75, 35],
+		    ["L", [60, 50]],
+		    ["L", [75, 65]],
+		    ["L", [90, 50]]
+		]
+	    ]
+	}
+    ]
+}
