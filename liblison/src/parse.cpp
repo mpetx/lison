@@ -756,9 +756,37 @@ namespace lison
 	"width", "height", "unit-per-inch", "editor", "pens", "brushes", "shapes"
     };
 
+    namespace detail
+    {
+	struct ShapeIndexChecker
+	{
+	    const Image &image;
+
+	    bool operator()(const Group &group) const
+	    {
+		return std::ranges::all_of(group.content, [*this](const Shape &shape) {
+		    return std::visit(*this, shape);
+		});
+	    }
+
+	    bool operator()(const Curve &curve) const
+	    {
+		return curve.pen < image.pens.size();
+	    }
+
+	    bool operator()(const Region &region) const
+	    {
+		return (!region.pen.has_value()
+			|| region.pen.value() < image.pens.size())
+		    && (!region.brush.has_value()
+			|| region.brush.value() < image.brushes.size());
+	    }
+	};
+    }
+
     static Image parse_image(const picojson::value &val)
     {
-	return parse_object<Image>(
+	auto im = parse_object<Image>(
 	    val,
 	    image_required_members,
 	    image_allowed_members,
@@ -793,5 +821,15 @@ namespace lison
 		[](Image &im, const picojson::value &val) {
 		    im.shapes = parse_array<Shape>(val, parse_shape, ParseFailure::bad_image);
 		}));
+
+	detail::ShapeIndexChecker checker { im };
+	if (!std::ranges::all_of(im.shapes, [&checker](const Shape &shape) {
+	    return std::visit(checker, shape);
+	}))
+	{
+	    throw ParseFailure::bad_shape;
+	}
+
+	return im;
     }
 }
