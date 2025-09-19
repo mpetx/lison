@@ -2,213 +2,213 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
-	"width": { "$ref": "#/$defs/positive-number" },
-	"height": { "$ref": "#/$defs/positive-number" },
-	"unit-per-inch": { "$ref": "#/$defs/positive-number" },
-	"editor": { "type": "string" },
-	"pens": {
-	    "type": "array",
-	    "items": { "$ref": "#/$defs/pen" }
-	},
-	"brushes": {
-	    "type": "array",
-	    "items": { "$ref": "#/$defs/brush" }
-	},
-	"shapes": {
-	    "type": "array",
-	    "items": { "$ref": "#/$defs/shape" }
-	}
+        "width": { "$ref": "#/$defs/positive-number" },
+        "height": { "$ref": "#/$defs/positive-number" },
+        "unit-per-inch": { "$ref": "#/$defs/positive-number" },
+        "editor": { "type": "string" },
+        "pens": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/pen" }
+        },
+        "brushes": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/brush" }
+        },
+        "shapes": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/shape" }
+        }
     },
     "required": [ "width", "height", "unit-per-inch", "pens", "brushes", "shapes" ],
     "additionalProperties": false,
     "$defs": {
-	"positive-number": {
-	    "type": "number",
-	    "exclusiveMinimum": 0
-	},
-	"non-negative-number": {
-	    "type": "number",
-	    "minimum": 0
-	},
-	"index": {
-	    "type": "integer",
-	    "minimum": 0
-	},
-	"point": {
-	    "type": "array",
-	    "items": { "type": "number" },
-	    "minItems": 2,
-	    "maxItems": 2
-	},
-	"color": {
-	    "type": "array",
-	    "items": {
-		"type": "number",
-		"minimum": 0,
-		"maximum": 1
-	    },
-	    "minItems": 3,
-	    "maxItems": 4
-	},
-	"pattern": {
-	    "anyOf": [
-		{ "$ref": "#/$defs/monochrome-pattern" },
-		{ "$ref": "#/$defs/linear-gradient-pattern" },
-		{ "$ref": "#/$defs/radial-gradient-pattern" }
-	    ]
-	},
-	"monochrome-pattern": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "monochrome" },
-		"color": { "$ref": "#/$defs/color" }
-	    },
-	    "required": [ "type", "color" ],
-	    "additionalProperties": false
-	},
-	"linear-gradient-pattern": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "linear-gradient" },
-		"point-1": { "$ref": "#/$defs/point" },
-		"color-1": { "$ref": "#/$defs/color" },
-		"point-2": { "$ref": "#/$defs/point" },
-		"color-2": { "$ref": "#/$defs/color" }
-	    },
-	    "required": [
-		"type",
-		"point-1", "color-1",
-		"point-2", "color-2"
-	    ],
-	    "additionalProperties": false
-	},
-	"radial-gradient-pattern": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "radial-gradient" },
-		"center-1": { "$ref": "#/$defs/point" },
-		"radius-1": { "$ref": "#/$defs/non-negative-number" },
-		"color-1": { "$ref": "#/$defs/color" },
-		"center-2": { "$ref": "#/$defs/point" },
-		"radius-2": { "$ref": "#/$defs/non-negative-number" },
-		"color-2": { "$ref": "#/$defs/color" }
-	    },
-	    "required": [
-		"type",
-		"center-1", "radius-1", "color-1",
-		"center-2", "radius-2", "color-2"
-	    ],
-	    "additionalProperties": false
-	},
-	"pen": {
-	    "type": "object",
-	    "properties": {
-		"pattern": { "$ref": "#/$defs/pattern" },
-		"width": { "$ref": "#/$defs/positive-number" },
-		"cap": {
-		    "enum": [ "butt", "round", "square" ]
-		},
-		"join": {
-		    "enum": [ "miter", "round", "bevel" ]
-		}
-	    },
-	    "required": [ "pattern", "width", "cap", "join" ],
-	    "additionalProperties": false
-	},
-	"brush": {
-	    "type": "object",
-	    "properties": {
-		"pattern": { "$ref": "#/$defs/pattern" }
-	    },
-	    "required": [ "pattern" ],
-	    "additionalProperties": false
-	},
-	"shape": {
-	    "anyOf": [
-		{ "$ref": "#/$defs/group-shape" },
-		{ "$ref": "#/$defs/curve-shape" },
-		{ "$ref": "#/$defs/region-shape" }
-	    ]
-	},
-	"group-shape": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "group" },
-		"content": {
-		    "type": "array",
-		    "items": { "$ref": "#/$defs/shape" }
-		},
-		"edit-annot": true
-	    },
-	    "required": [ "type", "content" ],
-	    "additionalProperties": false
-	},
-	"curve-shape": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "curve" },
-		"pen": { "$ref": "#/$defs/index" },
-		"data": { "$ref": "#/$defs/curve-data" }
-	    },
-	    "required": [ "type", "pen", "data" ],
-	    "additionalProperties": false
-	},
-	"region-shape": {
-	    "type": "object",
-	    "properties": {
-		"type": { "const": "region" },
-		"pen": { "$ref": "#/$defs/index" },
-		"brush": { "$ref": "#/$defs/index" },
-		"data": { "$ref": "#/$defs/region-data" }
-	    },
-	    "required": [ "type", "data" ],
-	    "additionalProperties": false
-	},
-	"curve-data": {
-	    "type": "array",
-	    "prefixItems": [
-		{ "$ref": "#/$defs/point" }
-	    ],
-	    "items": { "$ref": "#/$defs/segment" },
-	    "minItems": 1
-	},
-	"region-data": {
-	    "type": "array",
-	    "items": { "$ref": "#/$defs/curve-data" }
-	},
-	"segment": {
-	    "anyOf": [
-		{ "$ref": "#/$defs/line-segment" },
-		{ "$ref": "#/$defs/quadratic-bezier-segment" },
-		{ "$ref": "#/$defs/cubic-bezier-segment" }
-	    ]
-	},
-	"line-segment": {
-	    "type": "array",
-	    "prefixItems": [
-		{ "const": "L" }
-	    ],
-	    "items": { "$ref": "#/$defs/point" },
-	    "minItems": 2,
-	    "maxItems": 2
-	},
-	"quadratic-bezier-segment": {
-	    "type": "array",
-	    "prefixItems": [
-		{ "const": "Q" }
-	    ],
-	    "items": { "$ref": "#/$defs/point" },
-	    "minItems": 3,
-	    "maxItems": 3
-	},
-	"cubic-bezier-segment": {
-	    "type": "array",
-	    "prefixItems": [
-		{ "const": "C" }
-	    ],
-	    "items": { "$ref": "#/$defs/point" },
-	    "minItems": 4,
-	    "maxItems": 4
-	}
+        "positive-number": {
+            "type": "number",
+            "exclusiveMinimum": 0
+        },
+        "non-negative-number": {
+            "type": "number",
+            "minimum": 0
+        },
+        "index": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "point": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+        },
+        "color": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+            },
+            "minItems": 3,
+            "maxItems": 4
+        },
+        "pattern": {
+            "anyOf": [
+                { "$ref": "#/$defs/monochrome-pattern" },
+                { "$ref": "#/$defs/linear-gradient-pattern" },
+                { "$ref": "#/$defs/radial-gradient-pattern" }
+            ]
+        },
+        "monochrome-pattern": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "monochrome" },
+                "color": { "$ref": "#/$defs/color" }
+            },
+            "required": [ "type", "color" ],
+            "additionalProperties": false
+        },
+        "linear-gradient-pattern": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "linear-gradient" },
+                "point-1": { "$ref": "#/$defs/point" },
+                "color-1": { "$ref": "#/$defs/color" },
+                "point-2": { "$ref": "#/$defs/point" },
+                "color-2": { "$ref": "#/$defs/color" }
+            },
+            "required": [
+                "type",
+                "point-1", "color-1",
+                "point-2", "color-2"
+            ],
+            "additionalProperties": false
+        },
+        "radial-gradient-pattern": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "radial-gradient" },
+                "center-1": { "$ref": "#/$defs/point" },
+                "radius-1": { "$ref": "#/$defs/non-negative-number" },
+                "color-1": { "$ref": "#/$defs/color" },
+                "center-2": { "$ref": "#/$defs/point" },
+                "radius-2": { "$ref": "#/$defs/non-negative-number" },
+                "color-2": { "$ref": "#/$defs/color" }
+            },
+            "required": [
+                "type",
+                "center-1", "radius-1", "color-1",
+                "center-2", "radius-2", "color-2"
+            ],
+            "additionalProperties": false
+        },
+        "pen": {
+            "type": "object",
+            "properties": {
+                "pattern": { "$ref": "#/$defs/pattern" },
+                "width": { "$ref": "#/$defs/positive-number" },
+                "cap": {
+                    "enum": [ "butt", "round", "square" ]
+                },
+                "join": {
+                    "enum": [ "miter", "round", "bevel" ]
+                }
+            },
+            "required": [ "pattern", "width", "cap", "join" ],
+            "additionalProperties": false
+        },
+        "brush": {
+            "type": "object",
+            "properties": {
+                "pattern": { "$ref": "#/$defs/pattern" }
+            },
+            "required": [ "pattern" ],
+            "additionalProperties": false
+        },
+        "shape": {
+            "anyOf": [
+                { "$ref": "#/$defs/group-shape" },
+                { "$ref": "#/$defs/curve-shape" },
+                { "$ref": "#/$defs/region-shape" }
+            ]
+        },
+        "group-shape": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "group" },
+                "content": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/shape" }
+                },
+                "edit-annot": true
+            },
+            "required": [ "type", "content" ],
+            "additionalProperties": false
+        },
+        "curve-shape": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "curve" },
+                "pen": { "$ref": "#/$defs/index" },
+                "data": { "$ref": "#/$defs/curve-data" }
+            },
+            "required": [ "type", "pen", "data" ],
+            "additionalProperties": false
+        },
+        "region-shape": {
+            "type": "object",
+            "properties": {
+                "type": { "const": "region" },
+                "pen": { "$ref": "#/$defs/index" },
+                "brush": { "$ref": "#/$defs/index" },
+                "data": { "$ref": "#/$defs/region-data" }
+            },
+            "required": [ "type", "data" ],
+            "additionalProperties": false
+        },
+        "curve-data": {
+            "type": "array",
+            "prefixItems": [
+                { "$ref": "#/$defs/point" }
+            ],
+            "items": { "$ref": "#/$defs/segment" },
+            "minItems": 1
+        },
+        "region-data": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/curve-data" }
+        },
+        "segment": {
+            "anyOf": [
+                { "$ref": "#/$defs/line-segment" },
+                { "$ref": "#/$defs/quadratic-bezier-segment" },
+                { "$ref": "#/$defs/cubic-bezier-segment" }
+            ]
+        },
+        "line-segment": {
+            "type": "array",
+            "prefixItems": [
+                { "const": "L" }
+            ],
+            "items": { "$ref": "#/$defs/point" },
+            "minItems": 2,
+            "maxItems": 2
+        },
+        "quadratic-bezier-segment": {
+            "type": "array",
+            "prefixItems": [
+                { "const": "Q" }
+            ],
+            "items": { "$ref": "#/$defs/point" },
+            "minItems": 3,
+            "maxItems": 3
+        },
+        "cubic-bezier-segment": {
+            "type": "array",
+            "prefixItems": [
+                { "const": "C" }
+            ],
+            "items": { "$ref": "#/$defs/point" },
+            "minItems": 4,
+            "maxItems": 4
+        }
     }
 }
