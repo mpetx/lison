@@ -8,20 +8,26 @@ LISONは軽量ベクター画像形式です。このレポジトリは
 
 を含みます。
 
-## `liblison`
+## `lison`
 
-```cpp
-std::variant<lison::Image, lison::ParseFailure> lison::parse(std::string_view text);
-void lison::render(const lison::Image &image, cairo_t *cr, double ppi, double scale);
+```rust
+use lison::image::Image;
+use lison::render::render;
+
+let lison_str: &str = /* [..] */;
+let image: Image = serde_json::from_str(lison_str).unwrap();
+
+let context: cairo::Context = /* [..] */;
+let _ = render(&context, &image, 96.0, 1.0);
 ```
 
-## `lison2png`
+## `lison-to-png`
 
 ```console
-usage: lison2png [-o output] [-r resolution] [-s scale] input
+usage: lison-to-png [-h] [-o output] [-r resolution] [-s scale] input
 options:
   -h        : print help message.
   -o <file> : output file name.
   -r <num>  : resolution in ppi.
-  -s <num>  : magnification ratio.
+  -s <num>  : scale ratio.
 ```
