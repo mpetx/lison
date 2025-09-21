@@ -543,7 +543,105 @@ impl Serialize for CurveData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_float_eq::*;
+
+    trait Relative {
+        fn relative_error_from(&self, other: &Self) -> f64;
+    }
+
+    impl Relative for f64 {
+        fn relative_error_from(&self, other: &f64) -> f64 {
+            (self - other) / other
+        }
+    }
+
+    impl Relative for Point {
+        fn relative_error_from(&self, other: &Point) -> f64 {
+            self.x.relative_error_from(&other.x)
+                .max(self.y.relative_error_from(&other.y))
+        }
+    }
+
+    impl Relative for Color {
+        fn relative_error_from(&self, other: &Color) -> f64 {
+            self.red.relative_error_from(&other.red)
+                .max(self.green.relative_error_from(&other.green))
+                .max(self.blue.relative_error_from(&other.blue))
+                .max(self.alpha.relative_error_from(&other.alpha))
+        }
+    }
+
+    impl Relative for Pattern {
+        fn relative_error_from(&self, other: &Pattern) -> f64 {
+            match self {
+                Pattern::Monochrome(mono1) =>
+                    match other {
+                        Pattern::Monochrome(mono2) =>
+                            mono1.color.relative_error_from(&mono2.color),
+                        _ => f64::INFINITY
+                    },
+                Pattern::LinearGradient(grad1) =>
+                    match other {
+                        Pattern::LinearGradient(grad2) =>
+                            grad1.point_1.relative_error_from(&grad2.point_1)
+                            .max(grad1.color_1.relative_error_from(&grad2.color_1))
+                            .max(grad1.point_2.relative_error_from(&grad2.point_2))
+                            .max(grad1.color_2.relative_error_from(&grad2.color_2)) ,
+                        _ => f64::INFINITY
+                    },
+                Pattern::RadialGradient(grad1) =>
+                    match other {
+                        Pattern::RadialGradient(grad2) =>
+                            grad1.center_1.relative_error_from(&grad2.center_1)
+                            .max(grad1.radius_1.relative_error_from(&grad2.radius_1))
+                            .max(grad1.color_1.relative_error_from(&grad2.color_1))
+                            .max(grad1.center_2.relative_error_from(&grad2.center_2))
+                            .max(grad1.radius_2.relative_error_from(&grad2.radius_2))
+                            .max(grad1.color_2.relative_error_from(&grad2.color_2)),
+                        _ => f64::INFINITY
+                    }
+            }
+        }
+    }
+
+    impl Relative for Segment {
+        fn relative_error_from(&self, other: &Segment) -> f64 {
+            match self {
+                Segment::Line(line1) =>
+                    match other {
+                        Segment::Line(line2) =>
+                            line1.point_2.relative_error_from(&line2.point_2),
+                        _ => f64::INFINITY
+                    },
+                Segment::QuadraticBezier(bezier1) =>
+                    match other {
+                        Segment::QuadraticBezier(bezier2) =>
+                            bezier1.point_2.relative_error_from(&bezier2.point_2)
+                            .max(bezier1.point_3.relative_error_from(&bezier2.point_3)),
+                        _ => f64::INFINITY
+                    },
+                Segment::CubicBezier(bezier1) =>
+                    match other {
+                        Segment::CubicBezier(bezier2) =>
+                            bezier1.point_2.relative_error_from(&bezier2.point_2)
+                            .max(bezier1.point_3.relative_error_from(&bezier2.point_3))
+                            .max(bezier1.point_4.relative_error_from(&bezier2.point_4)),
+                        _ => f64::INFINITY
+                    }
+            }
+        }
+    }
+
+    macro_rules! assert_near {
+        ($expect_expr:expr, $actual_expr:expr) => {
+            assert_near!($expect_expr, $actual_expr, 0.0001);
+        };
+        ($expect_expr:expr, $actual_expr:expr, $max_error:expr) => {
+            let actual = $actual_expr;
+            let expect = $expect_expr;
+            let error = actual.relative_error_from(&expect).abs();
+            assert!(error <= $max_error);
+        };
+    }
 
     #[test]
     fn test_image_de() {
@@ -556,9 +654,9 @@ mod tests {
   "shapes": []
 }"#;
         let image: Image = serde_json::from_str(image_str).unwrap();
-        assert_float_relative_eq!(640.0, image.width);
-        assert_float_relative_eq!(480.0, image.height);
-        assert_float_relative_eq!(140.0, image.unit_per_inch);
+        assert_near!(640.0, image.width);
+        assert_near!(480.0, image.height);
+        assert_near!(140.0, image.unit_per_inch);
         assert_eq!(None, image.editor);
 
         let image2_str = r#"{
@@ -571,9 +669,9 @@ mod tests {
   "shapes": []
 }"#;
         let image2: Image = serde_json::from_str(image2_str).unwrap();
-        assert_float_relative_eq!(1920.0, image2.width);
-        assert_float_relative_eq!(1080.0, image2.height);
-        assert_float_relative_eq!(220.0, image2.unit_per_inch);
+        assert_near!(1920.0, image2.width);
+        assert_near!(1080.0, image2.height);
+        assert_near!(220.0, image2.unit_per_inch);
         assert_eq!(Some(String::from("T2SY95")), image2.editor);
     }
 
@@ -608,8 +706,7 @@ mod tests {
     fn test_point_de() {
         let p_str = r#"[2.4, 5.6]"#;
         let p: Point = serde_json::from_str(p_str).unwrap();
-        assert_float_relative_eq!(2.4, p.x);
-        assert_float_relative_eq!(5.6, p.y);
+        assert_near!(Point { x: 2.4, y: 5.6 }, p);
 
         let bad_p1_str = r#"[1]"#;
         let bad_p1 = serde_json::from_str::<Point>(bad_p1_str);
@@ -631,17 +728,11 @@ mod tests {
     fn test_color_de() {
         let c1_str = r#"[0.5, 1.0, 0.0]"#;
         let c1: Color = serde_json::from_str(c1_str).unwrap();
-        assert_float_relative_eq!(0.5, c1.red);
-        assert_float_relative_eq!(1.0, c1.green);
-        assert_float_relative_eq!(0.0, c1.blue);
-        assert_float_relative_eq!(1.0, c1.alpha);
+        assert_near!(Color { red: 0.5, green: 1.0, blue: 0.0, alpha: 1.0 }, c1);
 
         let c2_str = r#"[0.541, 0.169, 0.886, 0.7]"#;
         let c2: Color = serde_json::from_str(c2_str).unwrap();
-        assert_float_relative_eq!(0.541, c2.red);
-        assert_float_relative_eq!(0.169, c2.green);
-        assert_float_relative_eq!(0.886, c2.blue);
-        assert_float_relative_eq!(0.7, c2.alpha);
+        assert_near!(Color { red: 0.541, green: 0.169, blue: 0.886, alpha: 0.7 }, c2);
 
         let bad_c1_str = r#"[0.1, 0.2]"#;
         let bad_c1 = serde_json::from_str::<Color>(bad_c1_str);
@@ -670,14 +761,9 @@ mod tests {
   "color": [1, 1, 0]
 }"#;
         let p1: Pattern = serde_json::from_str(p1_str).unwrap();
-        if let Pattern::Monochrome(p) = p1 {
-            assert_float_relative_eq!(1.0, p.color.red);
-            assert_float_relative_eq!(1.0, p.color.green);
-            assert_float_relative_eq!(0.0, p.color.blue);
-            assert_float_relative_eq!(1.0, p.color.alpha);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Pattern::Monochrome(MonochromePattern {
+            color: Color { red: 1.0, green: 1.0, blue: 0.0, alpha: 1.0 }
+        }), p1);
 
         let p2_str = r#"{
   "type": "linear-gradient",
@@ -687,23 +773,12 @@ mod tests {
   "color-2": [1, 1, 1]
 }"#;
         let p2: Pattern = serde_json::from_str(p2_str).unwrap();
-        if let Pattern::LinearGradient(p) = p2 {
-            assert_float_relative_eq!(0.0, p.point_1.x);
-            assert_float_relative_eq!(0.0, p.point_1.y);
-            assert_float_relative_eq!(0.0, p.color_1.red);
-            assert_float_relative_eq!(1.0, p.color_1.green);
-            assert_float_relative_eq!(1.0, p.color_1.blue);
-            assert_float_relative_eq!(1.0, p.color_1.alpha);
-
-            assert_float_relative_eq!(100.0, p.point_2.x);
-            assert_float_relative_eq!(100.0, p.point_2.y);
-            assert_float_relative_eq!(1.0, p.color_2.red);
-            assert_float_relative_eq!(1.0, p.color_2.green);
-            assert_float_relative_eq!(1.0, p.color_2.blue);
-            assert_float_relative_eq!(1.0, p.color_2.alpha);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Pattern::LinearGradient(LinearGradientPattern {
+            point_1: Point { x: 0.0, y: 0.0 },
+            color_1: Color { red: 0.0, green: 1.0, blue: 1.0, alpha: 1.0 },
+            point_2: Point { x: 100.0, y: 100.0 },
+            color_2: Color { red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0 }
+        }), p2);
 
         let p3_str = r#"{
   "type": "radial-gradient",
@@ -715,25 +790,14 @@ mod tests {
   "color-2": [1, 0, 1, 0.1]
 }"#;
         let p3: Pattern = serde_json::from_str(p3_str).unwrap();
-        if let Pattern::RadialGradient(p) = p3 {
-            assert_float_relative_eq!(50.0, p.center_1.x);
-            assert_float_relative_eq!(50.0, p.center_1.y);
-            assert_float_relative_eq!(5.0, p.radius_1);
-            assert_float_relative_eq!(1.0, p.color_1.red);
-            assert_float_relative_eq!(0.0, p.color_1.green);
-            assert_float_relative_eq!(1.0, p.color_1.blue);
-            assert_float_relative_eq!(1.0, p.color_1.alpha);
-
-            assert_float_relative_eq!(50.0, p.center_2.x);
-            assert_float_relative_eq!(50.0, p.center_2.y);
-            assert_float_relative_eq!(70.7, p.radius_2);
-            assert_float_relative_eq!(1.0, p.color_2.red);
-            assert_float_relative_eq!(0.0, p.color_2.green);
-            assert_float_relative_eq!(1.0, p.color_2.blue);
-            assert_float_relative_eq!(0.1, p.color_2.alpha);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Pattern::RadialGradient(RadialGradientPattern {
+            center_1: Point { x: 50.0, y: 50.0 },
+            radius_1: 5.0,
+            color_1: Color { red: 1.0, green: 0.0, blue: 1.0, alpha: 1.0 },
+            center_2: Point { x: 50.0, y: 50.0 },
+            radius_2: 70.7,
+            color_2: Color { red: 1.0, green: 0.0, blue: 1.0, alpha: 0.1 },
+        }), p3);
     }
 
     #[test]
@@ -846,15 +910,10 @@ mod tests {
   "join": "bevel"
 }"#;
         let pen: Pen = serde_json::from_str(pen_str).unwrap();
-        if let Pattern::Monochrome(p) = pen.pattern {
-            assert_float_relative_eq!(0.3, p.color.red);
-            assert_float_relative_eq!(0.4, p.color.green);
-            assert_float_relative_eq!(0.5, p.color.blue);
-            assert_float_relative_eq!(0.6, p.color.alpha);
-        } else {
-            assert!(false);
-        }
-        assert_float_relative_eq!(5.0, pen.width);
+        assert_near!(Pattern::Monochrome(MonochromePattern {
+            color: Color { red: 0.3, green: 0.4, blue: 0.5, alpha: 0.6 }
+        }), pen.pattern);
+        assert_near!(5.0, pen.width);
         assert!(LineCap::Butt == pen.cap);
         assert!(LineJoin::Bevel == pen.join);
     }
@@ -882,14 +941,9 @@ mod tests {
   }
 }"#;
         let brush: Brush = serde_json::from_str(brush_str).unwrap();
-        if let Pattern::Monochrome(p) = brush.pattern {
-            assert_float_relative_eq!(0.5, p.color.red);
-            assert_float_relative_eq!(0.6, p.color.green);
-            assert_float_relative_eq!(0.7, p.color.blue);
-            assert_float_relative_eq!(1.0, p.color.alpha);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Pattern::Monochrome(MonochromePattern {
+            color: Color { red: 0.5, green: 0.6, blue: 0.7, alpha: 1.0 }
+        }), brush.pattern);
     }
 
     #[test]
@@ -907,36 +961,24 @@ mod tests {
     fn test_segment_de() {
         let seg1_str = r#"["L", [10, 11]]"#;
         let seg1: Segment = serde_json::from_str(seg1_str).unwrap();
-        if let Segment::Line(s) = seg1 {
-            assert_float_relative_eq!(10.0, s.point_2.x);
-            assert_float_relative_eq!(11.0, s.point_2.y);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Segment::Line(LineSegment {
+            point_2: Point { x: 10.0, y: 11.0 }
+        }), seg1);
 
         let seg2_str = r#"["Q", [12, 13], [14, 15]]"#;
         let seg2: Segment = serde_json::from_str(seg2_str).unwrap();
-        if let Segment::QuadraticBezier(s) = seg2 {
-            assert_float_relative_eq!(12.0, s.point_2.x);
-            assert_float_relative_eq!(13.0, s.point_2.y);
-            assert_float_relative_eq!(14.0, s.point_3.x);
-            assert_float_relative_eq!(15.0, s.point_3.y);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Segment::QuadraticBezier(QuadraticBezierSegment {
+            point_2: Point { x: 12.0, y: 13.0 },
+            point_3: Point { x: 14.0, y: 15.0 },
+        }), seg2);
 
         let seg3_str = r#"["C", [16, 17], [18, 19], [20, 21]]"#;
         let seg3: Segment = serde_json::from_str(seg3_str).unwrap();
-        if let Segment::CubicBezier(s) = seg3 {
-            assert_float_relative_eq!(16.0, s.point_2.x);
-            assert_float_relative_eq!(17.0, s.point_2.y);
-            assert_float_relative_eq!(18.0, s.point_3.x);
-            assert_float_relative_eq!(19.0, s.point_3.y);
-            assert_float_relative_eq!(20.0, s.point_4.x);
-            assert_float_relative_eq!(21.0, s.point_4.y);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Segment::CubicBezier(CubicBezierSegment {
+            point_2: Point { x: 16.0, y: 17.0 },
+            point_3: Point { x: 18.0, y: 19.0 },
+            point_4: Point { x: 20.0, y: 21.0 },
+        }), seg3);
     }
 
     #[test]
@@ -971,25 +1013,16 @@ mod tests {
   ["Q", [14, 15], [16, 17]]
 ]"#;
         let dat: CurveData = serde_json::from_str(dat_str).unwrap();
-        assert_float_relative_eq!(10.0, dat.start.x);
-        assert_float_relative_eq!(11.0, dat.start.y);
+        assert_near!(10.0, dat.start.x);
+        assert_near!(11.0, dat.start.y);
         assert_eq!(2, dat.segments.len());
-
-        if let Segment::Line(s) = dat.segments[0] {
-            assert_float_relative_eq!(12.0, s.point_2.x);
-            assert_float_relative_eq!(13.0, s.point_2.y);
-        } else {
-            assert!(false);
-        }
-
-        if let Segment::QuadraticBezier(s) = dat.segments[1] {
-            assert_float_relative_eq!(14.0, s.point_2.x);
-            assert_float_relative_eq!(15.0, s.point_2.y);
-            assert_float_relative_eq!(16.0, s.point_3.x);
-            assert_float_relative_eq!(17.0, s.point_3.y);
-        } else {
-            assert!(false);
-        }
+        assert_near!(Segment::Line(LineSegment {
+            point_2: Point { x: 12.0, y: 13.0 }
+        }), dat.segments[0]);
+        assert_near!(Segment::QuadraticBezier(QuadraticBezierSegment {
+            point_2: Point { x: 14.0, y: 15.0 },
+            point_3: Point { x: 16.0, y: 17.0 }
+        }), dat.segments[1]);
     }
 
     #[test]
@@ -1047,25 +1080,16 @@ mod tests {
         let sh2: Shape = serde_json::from_str(sh2_str).unwrap();
         if let Shape::Curve(s) = sh2 {
             assert_eq!(3, s.pen);
-            assert_float_relative_eq!(10.0, s.data.start.x);
-            assert_float_relative_eq!(11.0, s.data.start.y);
+            assert_near!(10.0, s.data.start.x);
+            assert_near!(11.0, s.data.start.y);
             assert_eq!(2, s.data.segments.len());
-
-            if let Segment::Line(seg) = &s.data.segments[0] {
-                assert_float_relative_eq!(12.0, seg.point_2.x);
-                assert_float_relative_eq!(13.0, seg.point_2.y);
-            } else {
-                assert!(false);
-            }
-
-            if let Segment::QuadraticBezier(seg) = &s.data.segments[1] {
-                assert_float_relative_eq!(14.0, seg.point_2.x);
-                assert_float_relative_eq!(15.0, seg.point_2.y);
-                assert_float_relative_eq!(16.0, seg.point_3.x);
-                assert_float_relative_eq!(17.0, seg.point_3.y);
-            } else {
-                assert!(false);
-            }
+            assert_near!(Segment::Line(LineSegment {
+                point_2: Point { x: 12.0, y: 13.0 }
+            }), s.data.segments[0]);
+            assert_near!(Segment::QuadraticBezier(QuadraticBezierSegment {
+                point_2: Point { x: 14.0, y: 15.0 },
+                point_3: Point { x: 16.0, y: 17.0 }
+            }), s.data.segments[1]);
         } else {
             assert!(false);
         }
@@ -1080,8 +1104,8 @@ mod tests {
             assert_eq!(Some(0), s.pen);
             assert_eq!(None, s.brush);
             assert_eq!(1, s.data.len());
-            assert_float_relative_eq!(7.0, s.data[0].start.x);
-            assert_float_relative_eq!(8.0, s.data[0].start.y);
+            assert_near!(7.0, s.data[0].start.x);
+            assert_near!(8.0, s.data[0].start.y);
         } else {
             assert!(false);
         }

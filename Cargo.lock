@@ -3,12 +3,6 @@
 version = 4
 
 [[package]]
-name = "assert_float_eq"
-version = "1.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d2119f741b79fe9907f5396d19bffcb46568cfcc315e78677d731972ac7085"
-
-[[package]]
 name = "bitflags"
 version = "2.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -216,7 +210,6 @@ checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 name = "lison"
 version = "0.1.0"
 dependencies = [
- "assert_float_eq",
  "cairo-rs",
  "serde",
  "serde_json",
